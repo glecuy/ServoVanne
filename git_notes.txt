@@ -1,0 +1,2 @@
+~/nas_public/Depot/git $ git init --bare ServoVanne.git
+git clone file:///mnt/nas_public/Depot/git/ServoVanne
