@@ -13,8 +13,6 @@
 #include <avr/eeprom.h>
 #include <avr/sleep.h>
 
-#include <avr/io.h>
-
 
 volatile unsigned long TimerTicks;
 

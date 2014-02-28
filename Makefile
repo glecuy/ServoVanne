@@ -26,6 +26,20 @@
 # $Id: Makefile,v 1.3 2011/04/08 12:43:06 luc Exp luc $
 #
 
+# /etc/avrdude.conf :
+#programmer
+#  id    = "usbasp-clone";
+#  desc  = "Any usbasp clone with correct VID/PID";
+#  type  = usbasp;
+#  usbvid    = 0x16C0; # VOTI
+#  usbpid    = 0x05DC; # Obdev's free shared PID
+#  #usbvendor  = "VOTI";
+#  #usbproduct = "";
+#;
+# /etc/udev/rules.d/60-UsbAsp.rules
+# SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="05dc", GROUP="users", MODE="0666"
+#
+
 FIRMWARE	:=ServoVanne
 MCU		:=atmega328
 #HZ		:=10000000
@@ -92,7 +106,8 @@ MODEM	:= $(shell ([-c /dev/tty*usbmodem* ] && ls /dev/tty*usbmodem*))
 ISP	:=-c stk500v2 -P $(MODEM)
 endif
 
-ISP:=-c arduino -p m328p -P /dev/ttyACM0      
+ISP:=-c usbasp-clone -p m328p -P usb      
+#ISP:=-c arduino -p m328p -P /dev/ttyACM0      
 #ISP:=-c arduino -p m328p -P /dev/ttyS0      
 #ISP:=-i10 -c ponyser -p m328p -P /dev/ttyS0      
 
