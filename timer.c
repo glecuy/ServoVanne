@@ -85,7 +85,9 @@ void timerO_PWM_Init(void)
 
 
     TCCR0A |= (1 << COM0A1);
-    // set none-inverting mode
+    TCCR0A |= (1 << COM0A0);
+    // 10 : Clear OC0A on Compare Match (none-inverting mode)
+    // 11 : Set OC0A on Compare Match
 
     TCCR0A |= (1 << WGM01) | (1 << WGM00);
     // set fast PWM Mode
