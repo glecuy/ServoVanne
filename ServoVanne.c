@@ -16,11 +16,49 @@
 #include "lcd_5110.h"
 #include "temperature.h"
 
-/* Global variable */
+#define TEMP_8_UNDEF -128
+#pragma pack(1)
+struct
+{
+    signed char Values[256];
+    int N_max;
+    int N;
+    unsigned char Index;
+}History;
+#pragma pack()
+
+/* Global variables */
 static char TempString[8];
-static int OutdoorTemp;
 static unsigned char PwmVanne;
 
+int OutdoorTemp;
+
+/* Pomp_cmd connected to Pin C2 (25) */
+#define PompInit() (DDRC |= (1 << PINC2)) // Pomp_cmd LED as output
+#define PompOn()   (PORTC |= (1 << PINC2))
+#define PompOff()  (PORTC &= ~(1 << PINC2))
+
+/* Return a value from 0 to 100
+ * corresponding to the desired aperture for the valve
+ */
+#define MAX_APERTURE 80
+#define MIN_APERTURE 0
+#define T_FOR_MAX_APERTURE -15
+#define T_FOR_MIN_APERTURE +22
+unsigned char TempToValve( int temperature )
+{
+	if ( temperature > T_FOR_MIN_APERTURE )
+		return 0;
+	else if ( temperature < T_FOR_MAX_APERTURE )
+		return 80;
+	else
+	{
+		int a, b;
+		a = ((MAX_APERTURE-MIN_APERTURE)/(T_FOR_MAX_APERTURE-T_FOR_MIN_APERTURE));
+		b = (MIN_APERTURE - a * T_FOR_MIN_APERTURE);
+		return ( temperature * a + b);
+	}
+}
 
 unsigned char Thermostat( void )
 {
@@ -34,46 +72,99 @@ unsigned char Thermostat( void )
 	}
 }
 
-/* Pomp_cmd connected to Pin C2 (25) */
-#define PompInit() (DDRC |= (1 << PINC2)) // Pomp_cmd LED as output
-#define PompOn()   (PORTC |= (1 << PINC2))
-#define PompOff()  (PORTC &= ~(1 << PINC2))
+void HistoryInit( long int Depth )
+{
+    int i;
 
-/* Return a value from 0 to 100 
- * corresponding to the desired aperture for the valve
- */
-#define MAX_APERTURE 80
-#define MIN_APERTURE 0
-#define T_FOR_MAX_APERTURE -15
-#define T_FOR_MIN_APERTURE +22
-unsigned char TempToValve( int temperature )
-{	
-	if ( temperature > T_FOR_MIN_APERTURE )
-		return 0;
-	else if ( temperature < T_FOR_MAX_APERTURE )
-		return 80;
-	else 
-	{
-		int a, b;
-		a = ((MAX_APERTURE-MIN_APERTURE)/(T_FOR_MAX_APERTURE-T_FOR_MIN_APERTURE));
-		b = (MIN_APERTURE - a * T_FOR_MIN_APERTURE);
-		return ( temperature * a + b); 
-	}	
+    for ( i=0 ; i< 256 ; i++ )
+    {
+        History.Values[i] = TEMP_8_UNDEF;
+    }
+    History.Index = 0;
+    History.N_max = (Depth+128L)/256;
+    History.N = 0;
 }
 
-//#undef TemperatureRead
-//#define TemperatureRead() (5)
+void HistoryAddValue( int T )
+{
+    long int Value;
+
+    Value  = (long int)History.Values[History.Index] * 4;
+    Value *= (long int)History.N;
+    Value += (long int)T;
+    History.N++;
+    History.Values[History.Index] = (signed char)((Value/(long int)History.N)/4);
+    if ( History.N >= History.N_max )
+    {
+        History.Index++;
+        History.N = 0;
+    }
+}
+
+
+int HistoryGetMax( void )
+{
+    int i;
+    int max = -128;
+
+    //printf( "N= %d Index = %d\n", History.N, History.Index );
+
+    for ( i=0 ; i< 256 ; i++ )
+    {
+        if ( (History.Values[i] != TEMP_8_UNDEF) && (History.Values[i] > max) )
+        {
+            max = History.Values[i];
+        }
+    }
+
+    return ((int)max * 4);
+}
+
+int HistoryGetMin( void )
+{
+    int i;
+    int min = +127;
+
+    //printf( "N= %d Index = %d\n", History.N, History.Index );
+
+    for ( i=0 ; i< 256 ; i++ )
+    {
+        if ( (History.Values[i] != TEMP_8_UNDEF) && (History.Values[i] < min) )
+        {
+            min = History.Values[i];
+        }
+    }
+
+    return ((int)min * 4);
+}
+
+//void DisplayMinMax( void )
+//{
+//	printf_P( PSTR("Min=%+d Max=%+d\n"), MinOutdoorTemp1.Temp, MaxOutdoorTemp1.Temp );
+//}
+
+int DbgTemperatureRead(void)
+{
+	static int temp;
+	static int dt;
+
+	if ( dt == 0 )
+		dt = 5;
+	temp+=dt;
+	if ( (temp > 220) || (temp < -150) )
+		dt = -dt;
+
+	return temp;
+}
 
 
 int main(void)
 {
     unsigned long Tick=0;
-    
+    int temp;
 
     timer1_init();
-
     timerO_PWM_Init();
-
     TemperatureInit();
 
     //  Enable global interrupts
@@ -81,50 +172,28 @@ int main(void)
 
     // Initialize UART print
     uart_printf_init();
-
     // Init LCD device
     LcdInitialise();
-    
+
     PompInit();
+
+    // 24 H history
+	//HistoryInit( 3600L*24 );
+
+	HistoryInit( 5000 );
 
     printf("ServoVanneInit\n\n");
 
 
 
     DDRB |= (1 << PINB2) | (1 << PINB1); // Set LEDs as output
-    
-
-// 	int t;
-//	for ( t= -25 ; t<+25 ; t+=2 )
-//	{
-//		printf_P(PSTR("T=%+d > Valve=%d\n"), t, TempToValve( t ) );
-//	}
-
-//	while( 1 )
-//	{
-//		Lcd_DrawString( "Hello" );
-//		MsSleep(2);		
-//	}
-//{
-//	long int R1, R2, RR, RT;
-//	
-//	R1= 56L;
-//	R2= 68L;
-//	
-//	RT=100L;	
-//	RR= (long)(RT*R2)/(RT+R2);
-//	printf_P(PSTR("R1=%ld R2=%ld RR=%ld, V=%ld\n"), R1, R2, RR, (120*RR)/(RR+R1) );
-//	RT=5L;	
-//	RR= (long)(RT*R2)/(RT+R2);
-//	printf_P(PSTR("R1=%ld R2=%ld RR=%ld, V=%ld\n"), R1, R2, RR, (120*RR)/(RR+R1) );	
-//}
 
     while ( 1 )
-    {		
+    {
         if ( timer1_GetTicks() >= (Tick + 10) )
         {
 			Tick = timer1_GetTicks();
-			
+
 			if ( Thermostat() != 0 )
 			{
 				sprintf_P(TempString, PSTR("Marche"));
@@ -134,15 +203,26 @@ int main(void)
 			{
 				sprintf_P(TempString, PSTR("Arret "));
 				PORTB &= ~(1 << PINB2);
-			}			
-			Lcd_DrawStringXY( TempString, 0, 0 );			
-			
+			}
+			Lcd_DrawStringXY( TempString, 2, 0 );
+
 			OutdoorTemp = TemperatureRead();
-			sprintf_P(TempString, PSTR("%+d.%d`"),  OutdoorTemp/10, OutdoorTemp%10 );
-            printf_P(PSTR("Temp=%s\n"), TempString );
-            //puts( TempString );
-			//Lcd_DrawString( TempString );
-			Lcd_DrawStringLargeXY( TempString, 12, 4 );
+			HistoryAddValue( OutdoorTemp );
+
+			//DisplayMinMax();
+			sprintf_P(TempString, PSTR("%+01d.%d` "),  OutdoorTemp/10, OutdoorTemp%10 );
+			Lcd_DrawStringLargeXY( TempString, 12, 3 );
+
+			temp = HistoryGetMin();
+			printf("Min=%d\n", temp);
+			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
+			Lcd_DrawStringXY( TempString, 0, 5 );
+
+			temp = HistoryGetMax();
+			printf("Max=%d\n", temp);
+			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
+			Lcd_DrawStringXY( TempString, 50, 5 );
+
 			timerO_PWM_SetValue( PwmVanne );
 			PwmVanne+=10;
         }
