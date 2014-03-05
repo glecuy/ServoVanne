@@ -178,13 +178,9 @@ int main(void)
     PompInit();
 
     // 24 H history
-	//HistoryInit( 3600L*24 );
-
-	HistoryInit( 5000 );
-
+	HistoryInit( 3600L*24 );
+    
     printf("ServoVanneInit\n\n");
-
-
 
     DDRB |= (1 << PINB2) | (1 << PINB1); // Set LEDs as output
 
@@ -204,7 +200,9 @@ int main(void)
 				sprintf_P(TempString, PSTR("Arret "));
 				PORTB &= ~(1 << PINB2);
 			}
-			Lcd_DrawStringXY( TempString, 2, 0 );
+			Lcd_DrawStringXY( TempString, 4, 0 );
+			
+			//Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
 
 			OutdoorTemp = TemperatureRead();
 			HistoryAddValue( OutdoorTemp );
