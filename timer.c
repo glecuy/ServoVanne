@@ -75,13 +75,13 @@ unsigned long timer1_GetTicks(void)
 /*
  * PWM generator
  */
-void timerO_PWM_Init(void)
+void timerO_PWM_Init(unsigned char Val)
 {
     DDRD |= (1 << DDD6);
     // PD6 is now an output (OC0A)
 
-    OCR0A = 128;
-    // set PWM for 50% duty cycle
+    OCR0A = Val;
+    // set initial value for PWM  
 
 
     TCCR0A |= (1 << COM0A1);

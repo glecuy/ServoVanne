@@ -8,7 +8,7 @@ unsigned long timer1_GetTicks(void);
 void UsSleep( unsigned long Delay );
 #define MsSleep(d) UsSleep((unsigned long)d*1000U)
 
-void timerO_PWM_Init(void);
+void timerO_PWM_Init(unsigned char Val);
 void timerO_PWM_SetValue(unsigned char Val);
 
 
