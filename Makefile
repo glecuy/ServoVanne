@@ -121,29 +121,29 @@ WFUSE	:=$(LOADER) -U lfuse:w:$(LFUSE):m -U hfuse:w:$(HFUSE):m
 
 load:
 	@printf "Loading firmware..."
-	$(LOAD) > /dev/null 2>&1
+	$(LOAD)
 	@echo "done."
 dump:
 	@printf "Reading $(MCU) device..."
-	@$(DUMP) > /dev/null 2>&1
+	@$(DUMP)
 	@echo "done."
 verify:
 	@printf "Verify $(MCU) device..."
-	@$(VERIFY) > /dev/null 2>&1
+	@$(VERIFY)
 	@echo "done."
 erase:
 	@printf "Erasing $(MCU) device..."
-	@$(ERASE) > /dev/null 2>&1
+	@$(ERASE)
 	@echo "done."
 rfuse:
 	@printf "Reading fuse..."
-	@$(RFUSE) > /dev/null 2>&1
+	@$(RFUSE)
 	cat high.txt
 	cat low.txt
 	@echo "done."
 wfuse:
 	@printf "Writing fuse..."
-	@$(WFUSE) > /dev/null 2>&1
+	@$(WFUSE)
 	@echo "done."
 #
 # Nettoyage, Archivage, etc.

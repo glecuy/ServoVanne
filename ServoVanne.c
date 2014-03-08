@@ -40,7 +40,7 @@ static char TempString[12];
 static unsigned short PwmVanne;
 static unsigned short PwmRampUp;
 // Heating Cycle estimation
-static unsigned short PompPowerRatio;
+//static unsigned short PompPowerRatio;
 
 int OutdoorTemp;
 
@@ -54,25 +54,38 @@ int OutdoorTemp;
 
 /* Return a value from 0 to 100
  * corresponding to the desired opening ratio for the valve
+ * There's no heating before 50 % !
  */
-#define MAX_OPENING 80
-#define MIN_OPENING 0
-#define T_FOR_MAX_OPENING -100
-#define T_FOR_MIN_OPENING +220
+#define MAX_OPENING 100
+#define MIN_OPENING 30
 unsigned short TempToValve( int temperature )
 {
-	if ( temperature > T_FOR_MIN_OPENING )
-		return 0;
-	else if ( temperature < T_FOR_MAX_OPENING )
+	if      ( temperature > +250 )  /* 25° */
+		return MIN_OPENING;
+	else if ( temperature > +200 )
+		return 52;
+	else if ( temperature > +160 )
+		return 55;
+	else if ( temperature > +120 )
+		return 58;
+	else if ( temperature > +80 )
+		return 62;
+	else if ( temperature > +60 )
+		return 68;
+	else if ( temperature > +10 )
+		return 72;
+	else if ( temperature > -30 )
+		return 75;
+	else if ( temperature > -60 )
 		return 80;
-	else
-	{
-		short int a, b;
-		a = (100*(MAX_OPENING-MIN_OPENING)/(T_FOR_MAX_OPENING-T_FOR_MIN_OPENING));
-		b = (MIN_OPENING - a * T_FOR_MIN_OPENING);
-		return (unsigned short)(((temperature * a) + b)/100);
-	}
+	else if ( temperature > -100 )
+		return 85;
+	else 
+		return MAX_OPENING;
+
 }
+
+
 
 unsigned char Thermostat( void )
 {
@@ -169,7 +182,7 @@ int DbgTemperatureRead(void)
 	if ( (temp > 220) || (temp < -150) )
 		dt = -dt;
 
-	return temp;
+	return 127;
 }
 
 
@@ -217,13 +230,11 @@ int main(void)
 			sprintf_P(TempString, PSTR("%+01d.%d` "),  OutdoorTemp/10, OutdoorTemp%10 );
 			Lcd_DrawStringLargeXY( TempString, 12, 3 );
 
-			temp = HistoryGetMin();
-			printf("Min=%d\n", temp);
+			temp = HistoryGetMin();			
 			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
 			Lcd_DrawStringXY( TempString, 0, 5 );
 
 			temp = HistoryGetMax();
-			printf("Max=%d\n", temp);
 			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
 			Lcd_DrawStringXY( TempString, 50, 5 );
 			
@@ -235,7 +246,7 @@ int main(void)
 			if ( Thermostat() != 0 && (PwmVanne > 0) )
 			{
 				PompOn();
-				RampUp = PwmRampUp/256;
+				RampUp = (PwmRampUp+128)/256;
 				sprintf_P(TempString, PSTR("%u/%u %%  "), RampUp, PwmVanne );
 				PORTB |= (1 << PINB2);  // Red Led ON
 				if ( RampUp < PwmVanne )
@@ -244,15 +255,18 @@ int main(void)
 			else
 			{
 				PompOff();
-				PwmRampUp = 0;
+				PwmRampUp = MIN_OPENING;
 				sprintf_P(TempString, PSTR("Arret "));
 				PORTB &= ~(1 << PINB2);  // Red Led OFF
-			}
-			
+			}			
 			Lcd_DrawStringXY( TempString, 48, 0 );
+			//printf_P( PSTR("RampUp=%u/PwmVanne=%u %% \n"), PwmRampUp, PwmVanne );
 
-			/* Set pwm value (Range 0-256) */
-			timerO_PWM_SetValue( PwmRampUp / 100 );
+			/* Set pwm value (Range 0-255) */
+			if ( PwmRampUp > (255*100) )
+				timerO_PWM_SetValue( 255 );
+			else
+				timerO_PWM_SetValue( (PwmRampUp+50) / 100 );
         }
 
     }

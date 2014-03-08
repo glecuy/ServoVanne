@@ -87,18 +87,18 @@ int TemperatureRead( void )
 
 	/* TODO log scale ! */
 	// Pente = -0.115	
-	// 25 = -0.115 * 218 + 50
+	// 24 = -0.122 * 218 + 51
 
 	adc = (long int)(ADCval/100);
 	if ( adc < 100 )
 		Temp = 400;
 	else if ( (adc >= 100) && (adc < 550) )
 	{
-		Temp = ((-115 * adc) + 50000) / 100;
+		Temp = ((-122 * adc) + 51000) / 100;
 	}
 	else
 	{
-		Temp = -140;
+		Temp = -160;
 	}
 	
     return (int)Temp;
