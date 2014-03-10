@@ -1,0 +1,54 @@
+**************************************************************
+
+* Sub-Circuit Definitions
+.SUBCKT DDZ12BSF  1   2
+*    Terminals    A   K
+D1 1 2 DF
+DZ 3 1 DR
+VZ 2 3 11.2
+.MODEL DF D ( IS=17.6p RS=32.6 N=1.10
++ CJO=34.0p VJ=1.00 M=0.330 TT=50.1n )
+.MODEL DR D ( IS=3.52f RS=0.527 N=0.681 )
+.ENDS
+.SUBCKT DDZ12     1   2
+*    Terminals    A   K
+D 1 3 DF
+D 3 2 DF
+.MODEL DF D(IS=76.9p RS=42.0m BV=1.00k IBV=5.00u CJO=26.5p  M=0.333 N=1.45 TT=4.32u)
+.ENDS DDZ12
+
+
+.SUBCKT Accumulator 1 2
+* C 1 2 100E-6
+R 1 2 123
+.ends Accumulator
+
+
+* Model Definitions
+.MODEL 1N4007 D(IS=76.9p RS=42.0m BV=1.00k IBV=5.00u CJO=26.5p  M=0.333 N=1.45 TT=4.32u)
+
+*SRC=BAT40V;DI_BAT40V;Diodes;Si;  40.0V  0.200A  5.00ns   Diodes Inc. Schottky
+.MODEL DI_BAT40V D  ( IS=82.9n RS=0.373 BV=40.0 IBV=10.0u
++ CJO=11.9p  M=0.333 N=1.14 TT=7.20n )
+
+.model D_LED  D(IS=1a RS=3.3 N=1.8)
+* http://home.broadpark.no/~pbrakken/el2/avgrensa/SPICE-modeller/pwrbjt.lib
+
+.MODEL BD437	   NPN(Is=1.129p Xti=3 Eg=1.11 Vaf=100 Bf=161 Ise=31.17p Ne=1.557
++   Ikf=1.948 Xtb=2 Br=1 Isc=23.5p Nc=1.489 Ikr=31.34m
++   Rc=.1682 Cjc=251.5p Mjc=.5045 Vjc=.75 Fc=.5 Cje=286.3p
++   Mje=.4961 Vje=.75 Tr=810n Tf=23.64n Itf=10.92 Xtf=.3795 Vtf=10
++   Rb=.1)
+.MODEL BD438	   PNP(Is=632.4f Xti=3 Eg=1.11 Vaf=100 Bf=112.1 Ise=962.8f
++   Ne=1.373 Ikf=2.187 Xtb=2.1 Br=66.4 Isc=974.4f Nc=1.207
++   Ikr=125.8 Rc=.2066 Cjc=508.9p Mjc=.4847 Vjc=.75 Fc=.5
++   Cje=379.8p Mje=.4937 Vje=.75 Tr=89.17n Tf=17.41n Itf=5.921
++   Xtf=1.062 Vtf=10 Rb=.1)
+.MODEL BC847 NPN BF=120
+.MODEL BC807 PNP BF=120
+.model bd434 PNP BF=80
+.model bd435 NPN BF=50
+* C B E
+
+.END
+
