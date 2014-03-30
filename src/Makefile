@@ -46,8 +46,8 @@ MCU		:=atmega328
 HZ		:=16000000U
 #
 # Valeurs des fusibles
-#LFUSE		:=0xce
-#HFUSE		:=0xdf
+LFUSE		:=0xce
+HFUSE		:=0xdf
 
 #
 # Vous ne devriez pas avoir besoin de modifier ce qui suit

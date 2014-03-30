@@ -17,6 +17,8 @@
 #include "temperature.h"
 
 
+#define VERSION "Pomp v 1.01"
+
 /*************
  * History:
  * 256 table values (8bit)
@@ -32,7 +34,17 @@ struct
     int N_max;
     int N;
     unsigned char Index;
-}History;
+}TempHistory;
+#pragma pack()
+
+#pragma pack(1)
+struct
+{
+    // Count Hundredth of hour of active state
+    unsigned char Values[24];
+    int N;
+    unsigned char Index;
+}CycleHistory;
 #pragma pack()
 
 /* Global variables */
@@ -57,7 +69,7 @@ int OutdoorTemp;
  * There's no heating before 50 % !
  */
 #define MAX_OPENING 100
-#define MIN_OPENING 30
+#define MIN_OPENING 25
 unsigned short TempToValve( int temperature )
 {
 	if      ( temperature > +250 )  /* 25° */
@@ -80,7 +92,7 @@ unsigned short TempToValve( int temperature )
 		return 80;
 	else if ( temperature > -100 )
 		return 85;
-	else 
+	else
 		return MAX_OPENING;
 
 }
@@ -105,11 +117,11 @@ void HistoryInit( long int Depth )
 
     for ( i=0 ; i< 256 ; i++ )
     {
-        History.Values[i] = TEMP_8_UNDEF;
+        TempHistory.Values[i] = TEMP_8_UNDEF;
     }
-    History.Index = 0;
-    History.N_max = (Depth+128L)/256;
-    History.N = 0;
+    TempHistory.Index = 0;
+    TempHistory.N_max = (Depth+128L)/256;
+    TempHistory.N = 0;
 }
 
 /* Add value to history
@@ -121,17 +133,17 @@ void HistoryAddValue( int T )
     long int Value;
 
 	/* Get current value, if N==0, Value is reset */
-    Value  = (long int)History.Values[History.Index] * 4;
-    Value *= (long int)History.N;
+    Value  = (long int)TempHistory.Values[TempHistory.Index] * 4;
+    Value *= (long int)TempHistory.N;
     Value += (long int)T;
-    History.N++;
+    TempHistory.N++;
     /* Calculate the mean value */
-    History.Values[History.Index] = (signed char)((Value/(long int)History.N)/4);
+    TempHistory.Values[TempHistory.Index] = (signed char)((Value/(long int)TempHistory.N)/4);
     /* Test for next table entry */
-    if ( History.N >= History.N_max )
+    if ( TempHistory.N >= TempHistory.N_max )
     {
-        History.Index++;
-        History.N = 0;
+        TempHistory.Index++;
+        TempHistory.N = 0;
     }
 }
 
@@ -141,13 +153,13 @@ int HistoryGetMax( void )
     int i;
     int max = -128;
 
-    //printf( "N= %d Index = %d\n", History.N, History.Index );
+    //printf( "N= %d Index = %d\n", TempHistory.N, TempHistory.Index );
 
     for ( i=0 ; i< 256 ; i++ )
     {
-        if ( (History.Values[i] != TEMP_8_UNDEF) && (History.Values[i] > max) )
+        if ( (TempHistory.Values[i] != TEMP_8_UNDEF) && (TempHistory.Values[i] > max) )
         {
-            max = History.Values[i];
+            max = TempHistory.Values[i];
         }
     }
 
@@ -161,13 +173,60 @@ int HistoryGetMin( void )
 
     for ( i=0 ; i< 256 ; i++ )
     {
-        if ( (History.Values[i] != TEMP_8_UNDEF) && (History.Values[i] < min) )
+        if ( (TempHistory.Values[i] != TEMP_8_UNDEF) && (TempHistory.Values[i] < min) )
         {
-            min = History.Values[i];
+            min = TempHistory.Values[i];
         }
     }
 
     return ((int)min * 4);
+}
+
+/*
+ * Add a point in cycle (On/off) 
+ * Supposed to be called every Second
+ * 
+ ********************************************/
+void CycleHistoryAdd( unsigned char State )
+{
+	CycleHistory.N++;
+	if ( (CycleHistory.N % 60) != 0 )
+	{
+		return;
+	}
+	if ( State != 0 )
+	{
+		CycleHistory.Values[CycleHistory.Index]++;
+	}
+	if ( CycleHistory.N >= 3600 )
+	{
+	    CycleHistory.N = 0;
+		CycleHistory.Index++;
+        if ( CycleHistory.Index >= 24 )
+        {
+            CycleHistory.Index = 0;
+        }
+        CycleHistory.Values[CycleHistory.Index]=0;
+	}
+}
+
+/*
+ * Return the number of minutes at active State
+ * 
+ ********************************************/
+int CycleHistoryRead( void )
+{
+	int i;
+	unsigned int Total;
+	
+	Total = 0;
+	for ( i=0; i< 24 ; i++ )
+	{
+		Total += (unsigned int)CycleHistory.Values[i];
+	}
+	
+	// convert hundredth of hour to Minutes
+	return ( Total*10 );	
 }
 
 
@@ -182,12 +241,22 @@ int DbgTemperatureRead(void)
 	if ( (temp > 220) || (temp < -150) )
 		dt = -dt;
 
-	return 127;
+	return -12;
+}
+
+void TemperatureFormatString( int temp )
+{
+	int tenth;
+
+	tenth = temp%10;
+	if ( tenth < 0 )
+		tenth = -tenth;
+	sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, tenth );
 }
 
 
 int main(void)
-{	
+{
     unsigned long Tick=0;
     unsigned short RampUp;
     int temp;
@@ -208,11 +277,15 @@ int main(void)
 
     // 24 H history => about 6 Min for each interval
 	HistoryInit( 3600L*24 );
-    
-    printf("ServoVanneInit\n\n");
+
+    //printf("ServoVanneInit\n\n");
 
     DDRB |= (1 << PINB2) | (1 << PINB1); // Set LEDs as output
 
+	Lcd_DrawStringXY( VERSION,  1, 2 );
+	Lcd_DrawStringXY( __DATE__, 1, 4 );
+	MsSleep(2000);
+	LcdClear();
 
     while ( 1 )
     {
@@ -220,30 +293,34 @@ int main(void)
         if ( timer1_GetTicks() >= (Tick + 10) )
         {
 			Tick = timer1_GetTicks();
-			
+
 			//Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
 
 			OutdoorTemp = TemperatureRead();
 			HistoryAddValue( OutdoorTemp );
 
-			//DisplayMinMax();
-			sprintf_P(TempString, PSTR("%+01d.%d` "),  OutdoorTemp/10, OutdoorTemp%10 );
+			//Display Current Min Max;
+			TemperatureFormatString( OutdoorTemp );
 			Lcd_DrawStringLargeXY( TempString, 12, 3 );
+			//printf_P( PSTR("Temp= %s \n"), TempString );
 
-			temp = HistoryGetMin();			
-			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
+			temp = HistoryGetMin();
+			TemperatureFormatString( temp );
 			Lcd_DrawStringXY( TempString, 0, 5 );
 
 			temp = HistoryGetMax();
-			sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, temp%10 );
+			TemperatureFormatString( temp );
 			Lcd_DrawStringXY( TempString, 50, 5 );
-			
+
 			// Convert outdoor temp to opening (%)
 			PwmVanne = TempToValve( OutdoorTemp );
-			
+
 			sprintf_P(TempString, PSTR("Vanne: "));
 			Lcd_DrawStringXY( TempString, 2, 0 );
-			if ( Thermostat() != 0 && (PwmVanne > 0) )
+			
+			sprintf_P(TempString, PSTR("Cycle:  %d min"), CycleHistoryRead());
+			Lcd_DrawStringXY( TempString, 2, 1 );			
+			if ( Thermostat() != 0  )
 			{
 				PompOn();
 				RampUp = (PwmRampUp+128)/256;
@@ -251,14 +328,16 @@ int main(void)
 				PORTB |= (1 << PINB2);  // Red Led ON
 				if ( RampUp < PwmVanne )
 					PwmRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
+				CycleHistoryAdd(1);
 			}
 			else
 			{
 				PompOff();
-				PwmRampUp = MIN_OPENING;
+				PwmRampUp = (MIN_OPENING*256);
 				sprintf_P(TempString, PSTR("Arret "));
 				PORTB &= ~(1 << PINB2);  // Red Led OFF
-			}			
+				CycleHistoryAdd(0);
+			}
 			Lcd_DrawStringXY( TempString, 48, 0 );
 			//printf_P( PSTR("RampUp=%u/PwmVanne=%u %% \n"), PwmRampUp, PwmVanne );
 
