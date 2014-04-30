@@ -224,9 +224,8 @@ int CycleHistoryRead( void )
 	{
 		Total += (unsigned int)CycleHistory.Values[i];
 	}
-	
-	// convert hundredth of hour to Minutes
-	return ( Total*10 );	
+
+	return Total;	
 }
 
 
@@ -318,7 +317,7 @@ int main(void)
 			sprintf_P(TempString, PSTR("Vanne: "));
 			Lcd_DrawStringXY( TempString, 2, 0 );
 			
-			sprintf_P(TempString, PSTR("Cycle:  %d min"), CycleHistoryRead());
+			sprintf_P(TempString, PSTR("Cycle: %d min  "), CycleHistoryRead());
 			Lcd_DrawStringXY( TempString, 2, 1 );			
 			if ( Thermostat() != 0  )
 			{
