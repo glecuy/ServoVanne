@@ -1,0 +1,9 @@
+;                                                         -*-Scheme-*-
+;;; 
+;;; Common init file for gaf
+;;;
+
+
+(component-library "/home/glecuyer/Dev/ServoVanne/schematic/my_symb")
+(component-library "/home/glecuyer/Dev/ServoVanne/schematic")
+(source-library "/home/glecuyer/Dev/ServoVanne/schematic")
