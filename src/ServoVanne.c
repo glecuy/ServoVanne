@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.01"
+#define VERSION "Pomp v 1.02"
 
 /*************
  * History:
@@ -68,7 +68,7 @@ int OutdoorTemp;
  * corresponding to the desired opening ratio for the valve
  * There's no heating before 50 % !
  */
-#define MAX_OPENING 100
+#define MAX_OPENING 99
 #define MIN_OPENING 25
 unsigned short TempToValve( int temperature )
 {
@@ -315,15 +315,15 @@ int main(void)
 			PwmVanne = TempToValve( OutdoorTemp );
 
 			sprintf_P(TempString, PSTR("Vanne: "));
-			Lcd_DrawStringXY( TempString, 2, 0 );
+			Lcd_DrawStringXY( TempString, 3, 0 );
 			
 			sprintf_P(TempString, PSTR("Cycle: %d min  "), CycleHistoryRead());
-			Lcd_DrawStringXY( TempString, 2, 1 );			
+			Lcd_DrawStringXY( TempString, 3, 1 );			
 			if ( Thermostat() != 0  )
 			{
 				PompOn();
 				RampUp = (PwmRampUp+128)/256;
-				sprintf_P(TempString, PSTR("%u/%u %%  "), RampUp, PwmVanne );
+				sprintf_P(TempString, PSTR("%02u/%02u%%  "), RampUp, PwmVanne );
 				PORTB |= (1 << PINB2);  // Red Led ON
 				if ( RampUp < PwmVanne )
 					PwmRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
@@ -337,7 +337,7 @@ int main(void)
 				PORTB &= ~(1 << PINB2);  // Red Led OFF
 				CycleHistoryAdd(0);
 			}
-			Lcd_DrawStringXY( TempString, 48, 0 );
+			Lcd_DrawStringXY( TempString, 45, 0 );
 			//printf_P( PSTR("RampUp=%u/PwmVanne=%u %% \n"), PwmRampUp, PwmVanne );
 
 			/* Set pwm value (Range 0-255) */
