@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.02"
+#define VERSION "Pomp v 1.03"
 
 /*************
  * History:
@@ -51,8 +51,8 @@ struct
 static char TempString[12];
 static unsigned short PwmVanne;
 static unsigned short PwmRampUp;
-// Heating Cycle estimation
-//static unsigned short PompPowerRatio;
+// Current Heating Cycle time
+static unsigned short OnStateTime;
 
 int OutdoorTemp;
 
@@ -75,19 +75,19 @@ unsigned short TempToValve( int temperature )
 	if      ( temperature > +250 )  /* 25° */
 		return MIN_OPENING;
 	else if ( temperature > +200 )
-		return 52;
+		return 55;//52;
 	else if ( temperature > +160 )
-		return 55;
+		return 58;//55;
 	else if ( temperature > +120 )
-		return 58;
+		return 62;//58;
 	else if ( temperature > +80 )
-		return 62;
+		return 68; //62;
 	else if ( temperature > +60 )
-		return 68;
+		return 72;//68;
 	else if ( temperature > +10 )
-		return 72;
+		return 75;//72;
 	else if ( temperature > -30 )
-		return 75;
+		return 78;//75;
 	else if ( temperature > -60 )
 		return 80;
 	else if ( temperature > -100 )
@@ -260,6 +260,10 @@ int main(void)
     unsigned short RampUp;
     int temp;
 
+	OnStateTime=0;
+	PwmVanne=0;
+	PwmRampUp=0;
+
     timer1_init();
     timerO_PWM_Init(0);
     TemperatureInit();
@@ -296,6 +300,7 @@ int main(void)
 			//Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
 
 			OutdoorTemp = TemperatureRead();
+			// Min Max management
 			HistoryAddValue( OutdoorTemp );
 
 			//Display Current Min Max;
@@ -313,11 +318,17 @@ int main(void)
 
 			// Convert outdoor temp to opening (%)
 			PwmVanne = TempToValve( OutdoorTemp );
+			// Add few percent if state is on for a long time
+			if ( (OnStateTime > 3600 ) && (PwmVanne < MAX_OPENING) )
+			{
+				OnStateTime=0;
+				PwmVanne+=2;
+			}
 
 			sprintf_P(TempString, PSTR("Vanne: "));
 			Lcd_DrawStringXY( TempString, 3, 0 );
 			
-			sprintf_P(TempString, PSTR("Cycle: %d min  "), CycleHistoryRead());
+			sprintf_P(TempString, PSTR("Cycle: %d mn   "), CycleHistoryRead());
 			Lcd_DrawStringXY( TempString, 3, 1 );			
 			if ( Thermostat() != 0  )
 			{
@@ -328,6 +339,7 @@ int main(void)
 				if ( RampUp < PwmVanne )
 					PwmRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
 				CycleHistoryAdd(1);
+				OnStateTime++;
 			}
 			else
 			{
@@ -336,6 +348,7 @@ int main(void)
 				sprintf_P(TempString, PSTR("Arret "));
 				PORTB &= ~(1 << PINB2);  // Red Led OFF
 				CycleHistoryAdd(0);
+				OnStateTime=0;
 			}
 			Lcd_DrawStringXY( TempString, 45, 0 );
 			//printf_P( PSTR("RampUp=%u/PwmVanne=%u %% \n"), PwmRampUp, PwmVanne );
