@@ -48,7 +48,7 @@ struct
 #pragma pack()
 
 /* Global variables */
-static char TempString[12];
+static char TempString[16];  // Dangerous !
 static unsigned short PwmVanne;
 static unsigned short PwmRampUp;
 // Current Heating Cycle time
@@ -121,19 +121,21 @@ void HistoryInit( long int Depth )
     }
     TempHistory.Index = 0;
     TempHistory.N_max = (Depth+128L)/256;
-    TempHistory.N = 0;
+    TempHistory.N = TempHistory.N_max-1;
 }
 
 /* Add value to history
  * Params T Temp in 10th degrees
- *        IsOn Non zero if Heating is turn ON
+ *
  **********************************************/
 void HistoryAddValue( int T )
 {
     long int Value;
 
+	if ( TempHistory.Values[TempHistory.Index] == TEMP_8_UNDEF )
+		TempHistory.Values[TempHistory.Index] = (signed char)(T/4);
 	/* Get current value, if N==0, Value is reset */
-    Value  = (long int)TempHistory.Values[TempHistory.Index] * 4;
+    Value  = 4 * (long int)TempHistory.Values[TempHistory.Index];
     Value *= (long int)TempHistory.N;
     Value += (long int)T;
     TempHistory.N++;
@@ -144,6 +146,8 @@ void HistoryAddValue( int T )
     {
         TempHistory.Index++;
         TempHistory.N = 0;
+        TempHistory.Values[TempHistory.Index] = (signed char)(T/4);
+        //printf("TempHistory.Index=%d\n", TempHistory.Index );
     }
 }
 
