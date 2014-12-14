@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.03"
+#define VERSION "Pomp v 1.04"
 
 /*************
  * History:
@@ -218,7 +218,7 @@ void CycleHistoryAdd( unsigned char State )
  * Return the number of minutes at active State
  * 
  ********************************************/
-int CycleHistoryRead( void )
+unsigned int CycleHistoryRead( void )
 {
 	int i;
 	unsigned int Total;
@@ -231,6 +231,24 @@ int CycleHistoryRead( void )
 
 	return Total;	
 }
+
+void FormatCycleHistoryToString( void )
+{
+	int i;
+	unsigned int Total;
+	unsigned int H, M;
+	
+	Total = 0;
+	for ( i=0; i< 24 ; i++ )
+	{
+		Total += (unsigned int)CycleHistory.Values[i];
+	}
+
+	H = Total / 60;
+	M = Total % 60;
+	sprintf_P(TempString, PSTR("Cycle: %2uh%02um "), H, M);
+}
+
 
 
 int DbgTemperatureRead(void)
@@ -332,13 +350,14 @@ int main(void)
 			sprintf_P(TempString, PSTR("Vanne: "));
 			Lcd_DrawStringXY( TempString, 3, 0 );
 			
-			sprintf_P(TempString, PSTR("Cycle: %d mn   "), CycleHistoryRead());
+			//sprintf_P(TempString, PSTR("Cycle: %u mn   "), CycleHistoryRead());
+			FormatCycleHistoryToString();
 			Lcd_DrawStringXY( TempString, 3, 1 );			
 			if ( Thermostat() != 0  )
 			{
 				PompOn();
 				RampUp = (PwmRampUp+128)/256;
-				sprintf_P(TempString, PSTR("%02u/%02u%%  "), RampUp, PwmVanne );
+				sprintf_P(TempString, PSTR("%2u%%  "), RampUp );
 				PORTB |= (1 << PINB2);  // Red Led ON
 				if ( RampUp < PwmVanne )
 					PwmRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
