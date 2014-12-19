@@ -94,7 +94,7 @@ int TemperatureRead( void )
 		Temp = 390;
 	else if ( (adc >= 100) && (adc < 550) )
 	{
-		Temp = ((-122 * adc) + 52000) / 100;
+		Temp = ((-113 * adc) + 48100) / 100;
 	}
 	else
 	{

@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.04"
+#define VERSION "Pomp v 1.05"
 
 /*************
  * History:
