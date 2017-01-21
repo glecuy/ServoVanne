@@ -4,6 +4,6 @@
 ;;;
 
 
-(component-library "/home/glecuyer/Dev/ServoVanne/schematic/my_symb")
-(component-library "/home/glecuyer/Dev/ServoVanne/schematic")
-(source-library "/home/glecuyer/Dev/ServoVanne/schematic")
+(component-library "/home/glecuyer/Projects/ServoVanne/schematic/my_symb")
+(component-library "/home/glecuyer/Projects/ServoVanne/schematic")
+(source-library "/home/glecuyer/Projects/ServoVanne/schematic")

@@ -92,14 +92,12 @@ int TemperatureRead( void )
 
 	adc = (long int)(ADCval/100);
 	if ( adc < 100 )
-		Temp = 390;
-	else if ( (adc >= 100) && (adc < 550) )
-	{
-		Temp = ((-113 * adc) + 48100) / 100;
-	}
+		Temp = 360;
+	else if ( adc > 550 )
+		Temp = -120;
 	else
 	{
-		Temp = -180;
+		Temp = ((-104 * adc) + 45600) / 100;
 	}
 	
     return (int)Temp;

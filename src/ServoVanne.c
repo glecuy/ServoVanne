@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.05"
+#define VERSION "Pomp v 1.06"
 
 /*************
  * History:
@@ -311,6 +311,12 @@ int main(void)
 	Lcd_DrawStringXY( __DATE__, 1, 4 );
 	MsSleep(2000);
 	LcdClear();
+
+//	while ( 1 )
+//	{
+//		sprintf_P(TempString, PSTR("%02X %02X %02X "), (int)PORTB, (int)PORTC, (int)PORTD );
+//		Lcd_DrawStringXY( TempString, 20, 0 );
+//	}
 
     while ( 1 )
     {

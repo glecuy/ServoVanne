@@ -109,11 +109,11 @@ endif
 ISP:=-c usbasp-clone -p m328p -P usb      
 #ISP:=-c arduino -p m328p -P /dev/ttyACM0      
 #ISP:=-c arduino -p m328p -P /dev/ttyS0      
-#ISP:=-i10 -c ponyser -p m328p -P /dev/ttyS0      
+#ISP:=-i10 -c ponyser -p m328p -P /dev/ttyS0 
 
 LOADER	:=$(LOADER) $(ISP)
 LOAD	:=$(LOADER) -i 5 -U flash:w:$(FIRMWARE).hex
-DUMP	:=$(LOADER) -i 5 -U flash:r:$(FIRMWARE).hex:i
+DUMP	:=$(LOADER) -i 5 -U flash:r:$(FIRMWARE)_.hex:i
 VERIFY	:=$(LOADER) -i 5 -U flash:v:$(FIRMWARE).hex
 ERASE	:=$(LOADER) -i 5 -e
 RFUSE	:=$(LOADER) -U lfuse:r:low.txt:b -U hfuse:r:high.txt:b
