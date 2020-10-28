@@ -72,32 +72,3 @@ unsigned long timer1_GetTicks(void)
 	return Ret;
 }
 
-/*
- * PWM generator
- */
-void timerO_PWM_Init(unsigned char Val)
-{
-    DDRD |= (1 << DDD6);
-    // PD6 is now an output (OC0A)
-
-    OCR0A = Val;
-    // set initial value for PWM  
-
-
-    TCCR0A |= (1 << COM0A1);
-    TCCR0A |= (1 << COM0A0);
-    // 10 : Clear OC0A on Compare Match (none-inverting mode)
-    // 11 : Set OC0A on Compare Match
-
-    TCCR0A |= (1 << WGM01) | (1 << WGM00);
-    // set fast PWM Mode
-
-    TCCR0B |= (1 << CS01);
-    // set prescaler to 8 and starts PWM
-}
-
-void timerO_PWM_SetValue(unsigned char Val)
-{
-	OCR0A = Val;
-}
-

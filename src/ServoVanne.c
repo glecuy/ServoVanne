@@ -12,12 +12,13 @@
 #include <avr/eeprom.h>
 
 #include "uart_printf.h"
-#include "timer.h"
+#include "timer1.h"
+#include "timer0_stepper.h"
 #include "lcd_5110.h"
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 1.06"
+#define VERSION "Pomp v 2.00"
 
 /*************
  * History:
@@ -287,7 +288,7 @@ int main(void)
 	PwmRampUp=0;
 
     timer1_init();
-    timerO_PWM_Init(0);
+    timerO_Stepper_Init(0);
     TemperatureInit();
 
     //  Enable global interrupts
@@ -318,6 +319,25 @@ int main(void)
 //		Lcd_DrawStringXY( TempString, 20, 0 );
 //	}
 
+    printf_P( PSTR("Hello Stepper\n") );
+
+    while ( 0 )
+    {
+        if ( timer1_GetTicks() >= (Tick + 10) )
+        {
+			Tick = timer1_GetTicks();
+            
+
+            {
+                extern unsigned int StepsTarget;
+                extern unsigned int StepsCounter;
+                printf_P( PSTR("StepsTarget=%u/StepsCounter=%u\n"), StepsTarget, StepsCounter );
+            }
+            
+        }
+    }
+
+
     while ( 1 )
     {
 		/* Test One second elapse */
@@ -325,7 +345,7 @@ int main(void)
         {
 			Tick = timer1_GetTicks();
 
-			//Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
+			Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
 
 			OutdoorTemp = TemperatureRead();
 			// Min Max management
@@ -380,13 +400,19 @@ int main(void)
 				OnStateTime=0;
 			}
 			Lcd_DrawStringXY( TempString, 45, 0 );
-			//printf_P( PSTR("RampUp=%u/PwmVanne=%u %% \n"), PwmRampUp, PwmVanne );
+            {
+                extern unsigned int StepsTarget;
+                extern unsigned int StepsCounter;
+                printf_P( PSTR("StepsTarget=%u/StepsCounter=%u\n"), StepsTarget, StepsCounter );
+            }
+
+            printf_P( PSTR("PwmRampUp=%u\n"), PwmRampUp );
 
 			/* Set pwm value (Range 0-255) */
 			if ( PwmRampUp > (255*100) )
-				timerO_PWM_SetValue( 255 );
+				timerO_Stepper_SetValue( 255 );
 			else
-				timerO_PWM_SetValue( (PwmRampUp+50) / 100 );
+				timerO_Stepper_SetValue( (PwmRampUp+50) / 100 );
         }
 
     }

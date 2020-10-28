@@ -42,7 +42,6 @@
 
 FIRMWARE	:=ServoVanne
 MCU		:=atmega328
-#HZ		:=10000000
 HZ		:=16000000U
 #
 # Valeurs des fusibles
@@ -56,7 +55,14 @@ OBJCOPY		:=avr-objcopy
 CFLAGS		:=-Os -D F_CPU=$(HZ)
 CFLAGS		+=-g -mmcu=$(MCU) -Wall -Wstrict-prototypes
 HEADERS         := $(wildcard *.h)
-SOURCES         := $(wildcard *.c)
+SOURCES         := \
+   ServoVanne.c \
+   lcd_5110.c \
+   temperature.c \
+   timer0_stepper.c \
+   timer1.c \
+   uart_printf.c
+
 OBJECTS         := $(patsubst %.c,%.o,$(SOURCES))
 
 all: $(FIRMWARE).hex

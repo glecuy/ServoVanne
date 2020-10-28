@@ -10,6 +10,7 @@
 
 
 #define BAUD_RATE 19200
+// picocom -b 19200 /dev/ttyS0
 
 int uart_putch(char ch,FILE *stream);
 int uart_getch(FILE *stream);
