@@ -24,12 +24,13 @@
 #define PH0P_PIN PINC4
 #define PH0M_PIN PINC5
 
-#define MAX_STEPS_VALUE  16000
+// (25 / 0.8) * (360/1.8) =
+#define MAX_STEPS_VALUE  16000 // 64 mm <=> 16000/(360/1.8) ⋅ .8
 #define LIMIT_SWITCH_PORT PIND
 #define LIMIT_SWITCH_PIN  PIND6
 
-volatile unsigned int  StepsTarget;
-volatile unsigned int  StepsCounter;
+volatile unsigned short  StepsTarget;
+volatile unsigned short  StepsCounter;
 volatile unsigned char Phases;
 volatile unsigned char InitDone;
 
@@ -80,10 +81,11 @@ void timerO_Stepper_Init(unsigned char Val){
     
 }
 
+// Val unit is millimeter
 void timerO_Stepper_SetValue(unsigned char Val)
 {
     if (InitDone != 0){
-        StepsTarget = Val * (MAX_STEPS_VALUE / 255) ;
+        StepsTarget = Val * (MAX_STEPS_VALUE / 64) ;
     }
 }
 

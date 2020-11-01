@@ -1,6 +1,5 @@
 /*****************************************************************************
 //  File Name    : ServoVanne.c
-//  Version      : 1.0
 //
 *****************************************************************************/
 #include <avr/io.h>
@@ -18,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 2.00"
+#define VERSION "Pomp v 2.01"
 
 /*************
  * History:
@@ -50,8 +49,8 @@ struct
 
 /* Global variables */
 static char TempString[16];  // Dangerous !
-static unsigned short PwmVanne;
-static unsigned short PwmRampUp;
+static unsigned short TargetVanne;
+static unsigned short StepperRampUp;
 // Current Heating Cycle time
 static unsigned short OnStateTime;
 
@@ -65,36 +64,36 @@ int OutdoorTemp;
 
 #define MAX_OPENING_TIME (30*60)
 
-/* Return a value from 0 to 100
+/* Return a value in mm
  * corresponding to the desired opening ratio for the valve
  * There's no heating before 50 % !
  */
-#define MAX_OPENING 99
-#define MIN_OPENING 25
+#define MAX_OPENING 58
+#define MIN_OPENING 0
 unsigned short TempToValve( int temperature )
 {
-	if      ( temperature > +250 )  /* 25° */
-		return MIN_OPENING;
-	else if ( temperature > +200 )
-		return 55;//52;
-	else if ( temperature > +160 )
-		return 58;//55;
-	else if ( temperature > +120 )
-		return 62;//58;
-	else if ( temperature > +80 )
-		return 68; //62;
-	else if ( temperature > +60 )
-		return 72;//68;
-	else if ( temperature > +10 )
-		return 75;//72;
-	else if ( temperature > -30 )
-		return 78;//75;
-	else if ( temperature > -60 )
-		return 80;
-	else if ( temperature > -100 )
-		return 85;
-	else
-		return MAX_OPENING;
+    if      ( temperature > +250 )  /* 25° */
+        return MIN_OPENING;
+    else if ( temperature > +200 )
+        return 27;                       // 55 %
+    else if ( temperature > +160 )
+        return 30;
+    else if ( temperature > +120 )
+        return 33;
+    else if ( temperature > +80 )
+        return 35;
+    else if ( temperature > +60 )
+        return 38;
+    else if ( temperature > +10 )
+        return 41;
+    else if ( temperature > -30 )
+        return 45;
+    else if ( temperature > -60 )
+        return 48;
+    else if ( temperature > -100 )
+        return 50;
+    else
+        return MAX_OPENING;  // 58 mm    // 100 %
 
 }
 
@@ -102,14 +101,14 @@ unsigned short TempToValve( int temperature )
 
 unsigned char Thermostat( void )
 {
-	if ( PINB & (1<<PINB0) )
-	{
-		return 0;
-	}
-	else
-	{
-		return 1;
-	}
+    if ( PINB & (1<<PINB0) )
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 void HistoryInit( long int Depth )
@@ -133,9 +132,9 @@ void HistoryAddValue( int T )
 {
     long int Value;
 
-	if ( TempHistory.Values[TempHistory.Index] == TEMP_8_UNDEF )
-		TempHistory.Values[TempHistory.Index] = (signed char)(T/4);
-	/* Get current value, if N==0, Value is reset */
+    if ( TempHistory.Values[TempHistory.Index] == TEMP_8_UNDEF )
+        TempHistory.Values[TempHistory.Index] = (signed char)(T/4);
+    /* Get current value, if N==0, Value is reset */
     Value  = 4 * (long int)TempHistory.Values[TempHistory.Index];
     Value *= (long int)TempHistory.N;
     Value += (long int)T;
@@ -188,92 +187,92 @@ int HistoryGetMin( void )
 }
 
 /*
- * Add a point in cycle (On/off) 
+ * Add a point in cycle (On/off)
  * Supposed to be called every Second
- * 
+ *
  ********************************************/
 void CycleHistoryAdd( unsigned char State )
 {
-	CycleHistory.N++;
-	if ( (CycleHistory.N % 60) != 0 )
-	{
-		return;
-	}
-	if ( State != 0 )
-	{
-		CycleHistory.Values[CycleHistory.Index]++;
-	}
-	if ( CycleHistory.N >= 3600 )
-	{
-	    CycleHistory.N = 0;
-		CycleHistory.Index++;
+    CycleHistory.N++;
+    if ( (CycleHistory.N % 60) != 0 )
+    {
+        return;
+    }
+    if ( State != 0 )
+    {
+        CycleHistory.Values[CycleHistory.Index]++;
+    }
+    if ( CycleHistory.N >= 3600 )
+    {
+        CycleHistory.N = 0;
+        CycleHistory.Index++;
         if ( CycleHistory.Index >= 24 )
         {
             CycleHistory.Index = 0;
         }
         CycleHistory.Values[CycleHistory.Index]=0;
-	}
+    }
 }
 
 /*
  * Return the number of minutes at active State
- * 
+ *
  ********************************************/
 unsigned int CycleHistoryRead( void )
 {
-	int i;
-	unsigned int Total;
-	
-	Total = 0;
-	for ( i=0; i< 24 ; i++ )
-	{
-		Total += (unsigned int)CycleHistory.Values[i];
-	}
+    int i;
+    unsigned int Total;
 
-	return Total;	
+    Total = 0;
+    for ( i=0; i< 24 ; i++ )
+    {
+        Total += (unsigned int)CycleHistory.Values[i];
+    }
+
+    return Total;
 }
 
 void FormatCycleHistoryToString( void )
 {
-	int i;
-	unsigned int Total;
-	unsigned int H, M;
-	
-	Total = 0;
-	for ( i=0; i< 24 ; i++ )
-	{
-		Total += (unsigned int)CycleHistory.Values[i];
-	}
+    int i;
+    unsigned int Total;
+    unsigned int H, M;
 
-	H = Total / 60;
-	M = Total % 60;
-	sprintf_P(TempString, PSTR("Cycle: %2uh%02um "), H, M);
+    Total = 0;
+    for ( i=0; i< 24 ; i++ )
+    {
+        Total += (unsigned int)CycleHistory.Values[i];
+    }
+
+    H = Total / 60;
+    M = Total % 60;
+    sprintf_P(TempString, PSTR("Cycle: %2uh%02um "), H, M);
 }
 
 
 
 int DbgTemperatureRead(void)
 {
-	static int temp;
-	static int dt;
+    static int temp;
+    static int dt;
 
-	if ( dt == 0 )
-		dt = 5;
-	temp+=dt;
-	if ( (temp > 220) || (temp < -150) )
-		dt = -dt;
+    if ( dt == 0 )
+        dt = 5;
+    temp+=dt;
+    if ( (temp > 220) || (temp < -150) )
+        dt = -dt;
 
-	return -12;
+    return -12;
 }
 
 void TemperatureFormatString( int temp )
 {
-	int tenth;
+    int tenth;
 
-	tenth = temp%10;
-	if ( tenth < 0 )
-		tenth = -tenth;
-	sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, tenth );
+    tenth = temp%10;
+    if ( tenth < 0 )
+        tenth = -tenth;
+    sprintf_P(TempString, PSTR("%+01d.%d` "),  temp/10, tenth );
 }
 
 
@@ -283,9 +282,9 @@ int main(void)
     unsigned short RampUp;
     int temp;
 
-	OnStateTime=0;
-	PwmVanne=0;
-	PwmRampUp=0;
+    OnStateTime=0;
+    TargetVanne=0;
+    StepperRampUp=0;
 
     timer1_init();
     timerO_Stepper_Init(0);
@@ -302,117 +301,95 @@ int main(void)
     PompInit();
 
     // 24 H history => about 6 Min for each interval
-	HistoryInit( 3600L*24 );
+    HistoryInit( 3600L*24 );
 
     //printf("ServoVanneInit\n\n");
 
     DDRB |= (1 << PINB2) | (1 << PINB1); // Set LEDs as output
 
-	Lcd_DrawStringXY( VERSION,  1, 2 );
-	Lcd_DrawStringXY( __DATE__, 1, 4 );
-	MsSleep(2000);
-	LcdClear();
+    Lcd_DrawStringXY( VERSION,  1, 2 );
+    Lcd_DrawStringXY( __DATE__, 1, 4 );
+    MsSleep(2000);
+    LcdClear();
 
-//	while ( 1 )
-//	{
-//		sprintf_P(TempString, PSTR("%02X %02X %02X "), (int)PORTB, (int)PORTC, (int)PORTD );
-//		Lcd_DrawStringXY( TempString, 20, 0 );
-//	}
-
-    printf_P( PSTR("Hello Stepper\n") );
-
-    while ( 0 )
-    {
-        if ( timer1_GetTicks() >= (Tick + 10) )
-        {
-			Tick = timer1_GetTicks();
-            
-
-            {
-                extern unsigned int StepsTarget;
-                extern unsigned int StepsCounter;
-                printf_P( PSTR("StepsTarget=%u/StepsCounter=%u\n"), StepsTarget, StepsCounter );
-            }
-            
-        }
-    }
-
+//  while ( 1 )
+//  {
+//      sprintf_P(TempString, PSTR("%02X %02X %02X "), (int)PORTB, (int)PORTC, (int)PORTD );
+//      Lcd_DrawStringXY( TempString, 20, 0 );
+//  }
 
     while ( 1 )
     {
-		/* Test One second elapse */
+        /* Test One second elapse */
         if ( timer1_GetTicks() >= (Tick + 10) )
         {
-			Tick = timer1_GetTicks();
+            Tick = timer1_GetTicks();
 
-			Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
+            //Lcd_DrawStringXY( "ABCDEFGHIJKLM", 0, 1 );
 
-			OutdoorTemp = TemperatureRead();
-			// Min Max management
-			HistoryAddValue( OutdoorTemp );
+            //OutdoorTemp = 210;
+            OutdoorTemp = TemperatureRead();
+            // Min Max management
+            HistoryAddValue( OutdoorTemp );
 
-			//Display Current Min Max;
-			TemperatureFormatString( OutdoorTemp );
-			Lcd_DrawStringLargeXY( TempString, 12, 3 );
-			//printf_P( PSTR("Temp= %s \n"), TempString );
+            //Display Current Min Max;
+            TemperatureFormatString( OutdoorTemp );
+            Lcd_DrawStringLargeXY( TempString, 12, 3 );
+            //printf_P( PSTR("Temp= %s \n"), TempString );
 
-			temp = HistoryGetMin();
-			TemperatureFormatString( temp );
-			Lcd_DrawStringXY( TempString, 0, 5 );
+            temp = HistoryGetMin();
+            TemperatureFormatString( temp );
+            Lcd_DrawStringXY( TempString, 0, 5 );
 
-			temp = HistoryGetMax();
-			TemperatureFormatString( temp );
-			Lcd_DrawStringXY( TempString, 50, 5 );
+            temp = HistoryGetMax();
+            TemperatureFormatString( temp );
+            Lcd_DrawStringXY( TempString, 50, 5 );
 
-			// Convert outdoor temp to opening (%)
-			PwmVanne = TempToValve( OutdoorTemp );
-			// Add few percent if state is on for a long time
-			if ( (OnStateTime > 3600 ) && (PwmVanne < MAX_OPENING) )
-			{
-				OnStateTime=0;
-				PwmVanne+=2;
-			}
-
-			sprintf_P(TempString, PSTR("Vanne: "));
-			Lcd_DrawStringXY( TempString, 3, 0 );
-			
-			//sprintf_P(TempString, PSTR("Cycle: %u mn   "), CycleHistoryRead());
-			FormatCycleHistoryToString();
-			Lcd_DrawStringXY( TempString, 3, 1 );			
-			if ( Thermostat() != 0  )
-			{
-				PompOn();
-				RampUp = (PwmRampUp+128)/256;
-				sprintf_P(TempString, PSTR("%2u%%  "), RampUp );
-				PORTB |= (1 << PINB2);  // Red Led ON
-				if ( RampUp < PwmVanne )
-					PwmRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
-				CycleHistoryAdd(1);
-				OnStateTime++;
-			}
-			else
-			{
-				PompOff();
-				PwmRampUp = (MIN_OPENING*256);
-				sprintf_P(TempString, PSTR("Arret "));
-				PORTB &= ~(1 << PINB2);  // Red Led OFF
-				CycleHistoryAdd(0);
-				OnStateTime=0;
-			}
-			Lcd_DrawStringXY( TempString, 45, 0 );
+            // Convert outdoor temp to opening (%)
+            TargetVanne = TempToValve( OutdoorTemp );
+            // Add few mm if state is on for a long time
+            if ( (OnStateTime > 3600 ) && (TargetVanne < MAX_OPENING) )
             {
-                extern unsigned int StepsTarget;
-                extern unsigned int StepsCounter;
-                printf_P( PSTR("StepsTarget=%u/StepsCounter=%u\n"), StepsTarget, StepsCounter );
+                OnStateTime=0;
+                TargetVanne+=1;
             }
 
-            printf_P( PSTR("PwmRampUp=%u\n"), PwmRampUp );
+            sprintf_P(TempString, PSTR("Vanne: "));
+            Lcd_DrawStringXY( TempString, 3, 0 );
 
-			/* Set pwm value (Range 0-255) */
-			if ( PwmRampUp > (255*100) )
-				timerO_Stepper_SetValue( 255 );
-			else
-				timerO_Stepper_SetValue( (PwmRampUp+50) / 100 );
+            //sprintf_P(TempString, PSTR("Cycle: %u mn   "), CycleHistoryRead());
+            FormatCycleHistoryToString();
+            Lcd_DrawStringXY( TempString, 3, 1 );
+            if ( Thermostat() != 0  )
+            {
+                PompOn();
+                RampUp = (StepperRampUp+128)/256;
+                //sprintf_P(TempString, PSTR("%2u->%2u%%  "), StepperRampUp/((MAX_OPENING*256)/100), (TargetVanne*100)/MAX_OPENING );
+                sprintf_P(TempString, PSTR("%2u/%2u  "), StepperRampUp/256, TargetVanne );
+                PORTB |= (1 << PINB2);  // Red Led ON
+                if ( RampUp < TargetVanne )
+                    StepperRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
+                CycleHistoryAdd(1);
+                OnStateTime++;
+            }
+            else
+            {
+                PompOff();
+                StepperRampUp = (MIN_OPENING*256);
+                sprintf_P(TempString, PSTR("Arret "));
+                PORTB &= ~(1 << PINB2);  // Red Led OFF
+                CycleHistoryAdd(0);
+                OnStateTime=0;
+            }
+            Lcd_DrawStringXY( TempString, 45, 0 );
+            //printf_P( PSTR("RampUp=%u/TargetVanne=%u mm \n"), StepperRampUp, TargetVanne );
+            //printf_P( PSTR("StepperRampUp=%u\n"), StepperRampUp );
+
+            /* Set Stepper value (Range 0-64 mm) */
+            if ( StepperRampUp > (255*MAX_OPENING) )
+                timerO_Stepper_SetValue( MAX_OPENING );
+            else
+                timerO_Stepper_SetValue( (StepperRampUp+128) / 256 );
         }
 
     }

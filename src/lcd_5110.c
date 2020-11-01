@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 
-#include "timer.h"
-
 #include "terminal6.h"
 #include "terminal12.h"
 
