@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 2.01"
+#define VERSION "Pomp v 2.02"
 
 /*************
  * History:
@@ -69,29 +69,29 @@ int OutdoorTemp;
  * There's no heating before 50 % !
  */
 #define MAX_OPENING 58
-#define MIN_OPENING 0
+#define MIN_OPENING 5
 unsigned short TempToValve( int temperature )
 {
     if      ( temperature > +250 )  /* 25° */
         return MIN_OPENING;
     else if ( temperature > +200 )
-        return 27;                       // 55 %
+        return 25;
     else if ( temperature > +160 )
-        return 30;
+        return 28;
     else if ( temperature > +120 )
-        return 33;
+        return 30;
     else if ( temperature > +80 )
-        return 35;
+        return 34;
     else if ( temperature > +60 )
         return 38;
     else if ( temperature > +10 )
         return 41;
     else if ( temperature > -30 )
-        return 45;
+        return 44;
     else if ( temperature > -60 )
         return 48;
     else if ( temperature > -100 )
-        return 50;
+        return 52;
     else
         return MAX_OPENING;  // 58 mm    // 100 %
 
