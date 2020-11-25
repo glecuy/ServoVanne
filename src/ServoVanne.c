@@ -17,7 +17,7 @@
 #include "temperature.h"
 
 
-#define VERSION "Pomp v 2.02"
+#define VERSION "Pomp v 2.03"
 
 /*************
  * History:
@@ -365,7 +365,7 @@ int main(void)
                 PompOn();
                 RampUp = (StepperRampUp+128)/256;
                 //sprintf_P(TempString, PSTR("%2u->%2u%%  "), StepperRampUp/((MAX_OPENING*256)/100), (TargetVanne*100)/MAX_OPENING );
-                sprintf_P(TempString, PSTR("%2u/%2u  "), StepperRampUp/256, TargetVanne );
+                sprintf_P(TempString, PSTR("%2u/%2u  "), RampUp, TargetVanne );
                 PORTB |= (1 << PINB2);  // Red Led ON
                 if ( RampUp < TargetVanne )
                     StepperRampUp += ((MAX_OPENING*256)/MAX_OPENING_TIME);
