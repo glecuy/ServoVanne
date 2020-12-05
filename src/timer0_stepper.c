@@ -70,7 +70,7 @@ void timerO_Stepper_Init(unsigned char Val){
     TCNT0 = 0;   //initialize counter value to 0
 
     // set compare match register for frequency generation
-    OCR0A = 130;  // 125 Hz
+    OCR0A = 132;  // 120 Hz
 
     // turn on CTC mode (Table 15-8)
     TCCR0A |= (1 << WGM01) | (0 << WGM00);
